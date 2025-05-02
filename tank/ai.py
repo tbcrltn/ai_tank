@@ -2,7 +2,7 @@ import numpy as np
 import random
 from collections import deque
 from dqn import DQN
-MAX_MEMORY = 100_000
+MAX_MEMORY = 500_000
 BATCH_SIZE = 100
 
 class AI:
@@ -13,9 +13,9 @@ class AI:
         self.computer = computer
         self.epsilon = 1.0
         self.epsilon_min = 0.1  # Minimum epsilon value
-        self.epsilon_decay = 0.995  # Decay rate
+        self.epsilon_decay = 0.9999# Decay rate
         self.n_games = 0
-        self.dqn = DQN(input_dims=6, hidden_dims=64, output_dims=5, gamma=.95, learning_rate=0.01)
+        self.dqn = DQN(input_dims=6, hidden_dims=128, output_dims=5, gamma=.94, learning_rate=0.0001)
         self.memory = deque(maxlen=MAX_MEMORY)
         self.collision_counter = 0
 
@@ -51,13 +51,14 @@ class AI:
     
     def get_states(self):
         states = []
-        states.append(self.player_pos()[0])
-        states.append(self.player_pos()[1])
-        states.append(self.bullet_position()[0])
-        states.append(self.bullet_position()[1])
+        width, height = 1280, 720
+        states.append(self.player_pos()[0]/width)
+        states.append(self.player_pos()[1]/height)
+        states.append(self.bullet_position()[0]/width)
+        states.append(self.bullet_position()[1]/height)
         #print(self.bullet_position()[0], self.bullet_position()[1])
-        states.append(self.enemy_pos()[0])
-        states.append(self.enemy_pos()[1])
+        states.append(self.enemy_pos()[0]/width)
+        states.append(self.enemy_pos()[1]/height)
         normalized_list = [x / 500 for x in states]
         return normalized_list
     
@@ -81,14 +82,14 @@ class AI:
     def get_collision_reward(self, collision):
         if collision:
             self.collision_counter+=1
-            return -1
+            return -0.2
         else:
             self.collision_counter = 0
-            return 1
+            return 0.1
     
     def get_damage_reward(self, damage): 
         if damage: 
-            return -1
+            return 0
         else: 
             return 0
         
@@ -96,13 +97,17 @@ class AI:
         enemy = np.array(self.enemy_pos())
         player = np.array(self.player_pos())
         dist = np.linalg.norm(enemy - player)
-        return -dist / 1000
+        return 0#-dist / 1000
 
     
     def get_reward(self, collision, damage): 
         reward = self.get_collision_reward(collision)
         reward += self.get_damage_reward(damage)
         reward += self.get_player_dist_reward()
+        reward -= 0.1
+        reward = max(min(reward, 10), -10)
+
+        #print(reward)
         return reward
     
     def train_short_term(self, state_old, action_index, reward, new_state, done):
@@ -124,26 +129,27 @@ class AI:
         self.dqn.update_gradients(dW1, dW2, dB1, dB2, self.dqn.learning_rate)
 
 
-
     def train_long_term_memory(self):
-        if len(self.memory) < BATCH_SIZE:
-            mini_sample = self.memory
-        else:
+        if not len(self.memory) < BATCH_SIZE:
             mini_sample = random.sample(self.memory, BATCH_SIZE)
 
-        for state, action_index, reward, next_state, done in mini_sample:
-            state = np.array(state, dtype=np.float32).reshape(1, -1)
-            next_state = np.array(next_state, dtype=np.float32).reshape(1, -1)
+            for state, action_index, reward, next_state, done in mini_sample:
+                state = np.array(state, dtype=np.float32).reshape(1, -1)
+                next_state = np.array(next_state, dtype=np.float32).reshape(1, -1)
 
-            Z1, A1, Z2, pred = self.dqn.forward_prop(state)
-            pred = pred.flatten()
-            target = pred.copy()
+                Z1, A1, Z2, pred = self.dqn.forward_prop(state)
+                pred = pred.flatten()
+                target = pred.copy()
 
-            _, _, _, next_pred = self.dqn.forward_prop(next_state)
-            next_pred = next_pred.flatten()
+                _, _, _, next_pred = self.dqn.forward_prop(next_state)
+                next_pred = next_pred.flatten()
+                
 
-            Q_new = reward if done else reward + self.dqn.gamma * np.max(next_pred)
-            target[action_index] = Q_new
+                Q_new = reward if done else reward + self.dqn.gamma * np.max(next_pred)
+                target[action_index] = Q_new
 
-            dW1, dW2, dB1, dB2 = self.dqn.back_prop(Z2, A1, Z2, state, pred, target)
-            self.dqn.update_gradients(dW1, dW2, dB1, dB2, self.dqn.learning_rate)
+                print(f"[Short-term] Pred before training: {pred}")
+                print(f"[Short-term] Target: {target}")
+
+                dW1, dW2, dB1, dB2 = self.dqn.back_prop(Z1, A1, Z2, state, pred, target)
+                self.dqn.update_gradients(dW1, dW2, dB1, dB2, self.dqn.learning_rate)

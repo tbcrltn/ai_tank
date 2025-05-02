@@ -12,9 +12,7 @@ class Level:
                 pygame.Rect(0, 0, 25, 720),
                 pygame.Rect(0, 0, 1280, 25),
                 pygame.Rect(1255, 0, 25, 720),
-                pygame.Rect(0, 695, 1280, 25),
-                pygame.Rect(400, 0, 25, 400),
-                pygame.Rect(200, 375, 200, 25)
+                pygame.Rect(0, 695, 1280, 25)
             ]
         elif level == 2:
             walls = [

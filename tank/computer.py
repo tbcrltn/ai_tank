@@ -47,7 +47,8 @@ class Computer:
 
     def move(self):
         if self.shoot_rate > 30:
-            self.game.enemy_shoot(self)
+            #self.game.enemy_shoot(self)
+            self.game.long_term()
             self.shoot_rate = 0 
         else:
             self.shoot_rate += 1
@@ -64,21 +65,12 @@ class Computer:
         # Check wall collisions BEFORE moving
         for wall in self.game.walls:
             if new_rect.colliderect(wall):
-                return  
+                return True
 
         # No collision — safe to move
         self.enemy = new_rect
 
-
-    def hit_wall(self):
-        if self.direction == "right":
-            self.enemy.x -= self.speed
-        elif self.direction == "down":
-            self.enemy.y -= self.speed
-        elif self.direction == "up":
-            self.enemy.y += self.speed
-        elif self.direction == "left":
-            self.enemy.x += self.speed
+        return False
 
         
     def damage(self):

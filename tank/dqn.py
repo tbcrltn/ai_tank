@@ -65,10 +65,6 @@ class DQN:
         dZ2 = np.expand_dims(dZ2, axis=0)  
         dW2 = A1.T.dot(dZ2)
         dB2 = np.sum(dZ2)
-        print("dZ2 shape:", dZ2.shape)
-        print("w2.T shape:", self.neural_network['w2'].T.shape)
-        print("dZ2.dot(w2.T) shape:", dZ2.dot(self.neural_network['w2'].T).shape)
-        print("relu_derivative(Z1) shape:", self.relu_derivative(Z1).shape)
         dZ1 = dZ2.dot(self.neural_network['w2'].T) * self.relu_derivative(Z1)
         dW1 = state_old.T.dot(dZ1)
         dB1 = np.sum(dZ1)
@@ -76,6 +72,11 @@ class DQN:
     
 
     def update_gradients(self, dW1, dW2, dB1, dB2, lr): 
+        max_grad_norm = 1.0
+        dW1 = np.clip(dW1, -max_grad_norm, max_grad_norm)
+        dW2 = np.clip(dW2, -max_grad_norm, max_grad_norm)
+        dB1 = np.clip(dB1, -max_grad_norm, max_grad_norm)
+        dB2 = np.clip(dB2, -max_grad_norm, max_grad_norm)
         self.neural_network['W1'] -= dW1*lr
         self.neural_network["w2"] -= dW2*lr
         self.neural_network["b1"] -= dB1*lr

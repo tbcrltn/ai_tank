@@ -16,12 +16,13 @@ class Game:
         self.screen = pygame.display.set_mode((1280, 720))
         self.running = True
         self.clock = pygame.time.Clock()
+        self.reward = 0
         self.player_pos = pygame.Vector2(self.screen.get_width() / 2, self.screen.get_height() / 2)
         self.dt = 0
         self.level = Level(self.screen, self)
         self.current_level = 1
         self.player = Player(self.player_pos, self.screen, self.dt, self.clock, self, 2)
-        self.computer = Computer(75, 75, self.screen, self.player, 1, self.clock, self)
+        self.computer = Computer(200, 600, self.screen, self.player, 1, self.clock, self)
         self.bullet = Bullet(self.screen, 5, self.player, self.computer)
         self.font = pygame.font.Font("fonts/pixel.ttf", 20)
         self.enemies = []
@@ -74,8 +75,7 @@ class Game:
     def reset(self):
         done = False
         destroyed = self.check_destroyed()
-        self.ai.train_long_term_memory()
-        self.ai.n_games += 1
+        self.long_term()
         print(self.ai.epsilon)
         if destroyed:
             self.player.player.x = self.player_pos.x
@@ -86,12 +86,6 @@ class Game:
                 enemy.enemy.y = self.enemy_pos[self.enemies.index(enemy)][1]
                 enemy.health = 5
             self.bullet.destroybullet()
-            #if self.current_level == 3:
-                #self.new_enemy(75, 600)
-            #if self.current_level == 6:
-                #self.new_enemy(1200, 75)
-            #if self.current_level == 9:
-                #self.new_enemy(1200, 600)
             done = True
 
         return done
@@ -116,17 +110,11 @@ class Game:
                 self.player.hit_wall()
                 
             for enemy in self.enemies:   
-                if enemy.enemy.colliderect(wall):
-                    enemy.hit_wall()  
-                    wall_hit = True
-                else:
-                    wall_hit = False
   
 
                 if enemy.enemy.colliderect(self.player.player):
-                    enemy.hit_wall()
                     self.player.hit_wall()
-            return wall_hit
+
 
     def bullet_collision(self):
         for bullet in self.bullet.bullets:
@@ -326,10 +314,16 @@ class Game:
 
 
     def get_reward(self): 
-        wall_col =  self.wall_collision()
+        wall_col =  self.computer.move()
         damage = self.bullet_collision()
         reward = self.ai.get_reward(wall_col, damage)
+        self.reward = reward
         return reward
+
+    def long_term(self):
+        self.ai.train_long_term_memory()
+        self.ai.n_games += 1
+        print(self.ai.n_games, self.reward, self.ai.epsilon)
 
 
 
